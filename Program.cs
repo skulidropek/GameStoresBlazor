@@ -24,7 +24,7 @@ builder.Services.AddAuthorization();
 builder.Services.AddAuthentication()
     .AddSteam(options =>
     {
-        options.ApplicationKey = "";
+        options.ApplicationKey = Environment.GetEnvironmentVariable("steam_api_key");
         options.CallbackPath = new PathString("/signin-steam");
 
         options.Events = new AspNet.Security.OpenId.OpenIdAuthenticationEvents
