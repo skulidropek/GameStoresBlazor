@@ -361,4 +361,6 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
-**/Properties/*
+
+# Игнорировать все в папке Properties
+Properties/*
