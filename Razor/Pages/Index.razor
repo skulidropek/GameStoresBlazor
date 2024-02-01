@@ -1,10 +1,10 @@
-﻿@page "/{categoryFilter?}/"
+﻿@page "/"
 @inject DataBaseContext DataBaseContext;
 @using Microsoft.AspNetCore.Components.Web
 @using Microsoft.EntityFrameworkCore
 <div class="container py-3">
 
-    <Navbar Categories="@_categories" OnSearch="Search" />
+    <Navbar Categories="@_categories" OnSearch="SearchFilter" OnCategory="CategoryFilter" />
 
     <div class="row no-gutters mt-3">
         @if(_products != null)
@@ -18,20 +18,19 @@
 </div>
 
 @code {
-    [Parameter]
-    public string? CategoryFilter { get; set; }
 
     private IEnumerable<ProductModel> _products;
     private IEnumerable<CategoryModel> _categories;
     private string? _searchFilter { get; set; }
-
-    protected override Task OnParametersSetAsync() => LoadProducts(_searchFilter);
+    private string? _categoryFilter { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
         _categories = await DataBaseContext.Categories
             .AsNoTracking()
             .ToListAsync();
+
+        await LoadProducts();
 
         //await ProductCalculate();
 
@@ -98,24 +97,30 @@
         // }
     }
 
-    private Task Search(string searchTerm) 
+    private Task SearchFilter(string searchTerm)
     {
         _searchFilter = searchTerm;
-        return LoadProducts(searchTerm); 
+        return LoadProducts(); 
+    }  
+    
+    private Task CategoryFilter(string category) 
+    {
+        _categoryFilter = category;
+        return LoadProducts(); 
     }
 
-    private async Task LoadProducts(string? searchTerm = null)
+    private async Task LoadProducts()
     {
         var query = DataBaseContext.Products.AsNoTracking();
 
-        if (!string.IsNullOrEmpty(CategoryFilter))
+        if (!string.IsNullOrEmpty(_categoryFilter))
         {
-            query = query.Where(p => p.Category.Name == CategoryFilter);
+            query = query.Where(p => p.Category.Name == _categoryFilter);
         }
 
-        if (!string.IsNullOrEmpty(searchTerm))
+        if (!string.IsNullOrEmpty(_searchFilter))
         {
-            query = query.Where(p => p.Name.Contains(searchTerm));
+            query = query.Where(p => p.Name.Contains(_searchFilter));
         }
 
         query = query.Include(s => s.Items);

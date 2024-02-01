@@ -2,12 +2,14 @@
     <div class="container-fluid px-md-4 px-2">
         <a class="navbar-brand" href="">Магазин</a>
         <div class="d-flex flex-row flex-wrap">
-            <NavLink class="nav-link" href="">Все</NavLink>
+            <!-- <NavLink class="nav-link" href="">Все</NavLink> -->
+            <button class="nav-link btn btn-link" @onclick="() => OnCategory.InvokeAsync(string.Empty)">Все</button>
             @if (Categories != null)
             {
                 foreach (var category in Categories)
                 {
-                    <NavLink class="nav-link" href="@category.Name">@category.Name</NavLink>
+                    <button class="nav-link btn btn-link" @onclick="() => OnCategory.InvokeAsync(category.Name)">@category.Name</button>
+                    <!-- <NavLink class="nav-link" href="@category.Name">@category.Name</NavLink> -->
                 }
             }
         </div>
@@ -24,6 +26,9 @@
     public IEnumerable<CategoryModel> Categories { get; set; }
 
     [Parameter] public EventCallback<string> OnSearch { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnCategory { get; set; }
     
     private string searchTerm;
 }
