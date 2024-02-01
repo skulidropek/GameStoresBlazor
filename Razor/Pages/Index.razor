@@ -1,10 +1,10 @@
-﻿@page "/{categoryFilter?}"
+﻿@page "/"
 @inject DataBaseContext DataBaseContext;
 @using Microsoft.AspNetCore.Components.Web
 @using Microsoft.EntityFrameworkCore
 <div class="container py-3">
 
-    <Navbar Categories="@_categories" />
+    <Navbar Categories="@_categories" OnSearch="SearchFilter" OnCategory="CategoryFilter" />
 
     <div class="row no-gutters mt-3">
         @if(_products != null)
@@ -18,22 +18,19 @@
 </div>
 
 @code {
-    [Parameter]
-    public string? CategoryFilter { get; set; }
 
     private IEnumerable<ProductModel> _products;
     private IEnumerable<CategoryModel> _categories;
-
-    protected override async Task OnParametersSetAsync()
-    {
-        await ProductCalculate();
-    }
+    private string? _searchFilter { get; set; }
+    private string? _categoryFilter { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
         _categories = await DataBaseContext.Categories
             .AsNoTracking()
             .ToListAsync();
+
+        await LoadProducts();
 
         //await ProductCalculate();
 
@@ -74,7 +71,7 @@
         //             CategoryId = category.Id,
         //         });
         //     } 
-            
+
         //     for (int i = 0; i < 10; i++)
         //     {
 
@@ -100,22 +97,34 @@
         // }
     }
 
-    private async Task ProductCalculate()
+    private Task SearchFilter(string searchTerm)
     {
-        if (!string.IsNullOrEmpty(CategoryFilter))
+        _searchFilter = searchTerm;
+        return LoadProducts(); 
+    }  
+    
+    private Task CategoryFilter(string category) 
+    {
+        _categoryFilter = category;
+        return LoadProducts(); 
+    }
+
+    private async Task LoadProducts()
+    {
+        var query = DataBaseContext.Products.AsNoTracking();
+
+        if (!string.IsNullOrEmpty(_categoryFilter))
         {
-            _products = await DataBaseContext.Products
-                .AsNoTracking()
-                .Where(p => p.Category.Name == CategoryFilter)
-                .Include(s => s.Items)
-                .ToListAsync();
+            query = query.Where(p => p.Category.Name == _categoryFilter);
         }
-        else
+
+        if (!string.IsNullOrEmpty(_searchFilter))
         {
-            _products = await DataBaseContext.Products
-               .AsNoTracking()
-                .Include(s => s.Items)
-                .ToListAsync();
+            query = query.Where(p => p.Name.Contains(_searchFilter));
         }
+
+        query = query.Include(s => s.Items);
+
+        _products = await query.ToListAsync();
     }
 }

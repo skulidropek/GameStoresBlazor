@@ -1,26 +1,32 @@
-﻿@inject DataBaseContext DataBaseContext;
-
-<nav class="navbar navbar-dark bg-dark">
-    <div class="container-fluid">
+﻿<nav class="navbar navbar-dark bg-dark rounded-3">
+    <div class="container-fluid px-md-4 px-2">
         <a class="navbar-brand" href="">Магазин</a>
         <div class="d-flex flex-row flex-wrap">
-            <NavLink class="nav-link" href="">Все</NavLink>
+            <!-- <NavLink class="nav-link" href="">Все</NavLink> -->
+            <button class="nav-link btn btn-link" @onclick="() => OnCategory.InvokeAsync(string.Empty)">Все</button>
             @if (Categories != null)
+            {
                 foreach (var category in Categories)
                 {
-                    var href = $"{category.Name}";
-                    <NavLink class="nav-link" href="@href">@category.Name</NavLink>
+                    <button class="nav-link btn btn-link" @onclick="() => OnCategory.InvokeAsync(category.Name)">@category.Name</button>
+                    <!-- <NavLink class="nav-link" href="@category.Name">@category.Name</NavLink> -->
                 }
+            }
         </div>
     </div>
 
-    <form class="form-inline my-2 my-lg-0 d-flex" style="width: 100%;">
-        <input class="form-control mr-sm-2" type="search" placeholder="Поиск" aria-label="Search" style="background-color: #555; color: white; width: 85%;">
-        <button class="btn my-2 my-sm-0" type="submit" style="background-color: #6c757d; color: white; width: 15%;">Поиск</button>
+    <form class="form-inline my-2 my-lg-0 d-flex w-100 px-2" @onsubmit="() => OnSearch.InvokeAsync(searchTerm)">
+        <input class="form-control me-2 w-85" type="search" placeholder="Поиск" aria-label="Search" @bind="searchTerm">
+        <button class="btn my-2 my-sm-0 bg-secondary text-white" type="submit">Поиск</button>
     </form>
 </nav>
 
 @code {
     [Parameter]
     public IEnumerable<CategoryModel> Categories { get; set; }
+
+    [Parameter] public EventCallback<string> OnSearch { get; set; }
+
+    [Parameter]
+    public EventCallback<string> OnCategory { get; set; }
 }
