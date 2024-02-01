@@ -1,0 +1,213 @@
+﻿@using GameStoresBlazor.Models.Transactions
+@using GameStoresBlazor.Services.Transactions
+@inject DataBaseContext DataBaseContext;
+@inject AuthenticationStateProvider AuthenticationStateProvider;
+@inject UserManager<SteamIdentityUserModel> UserManager;
+@inject TransactionService TransactionService;
+
+<div class="modal @ModalClass" tabindex="-1" role="dialog" style="display:@ModalDisplay">
+    <div class="modal-dialog modal-xl modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Package Details</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close" @onclick="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    @foreach (var item in Product.Items)
+                    {
+                        <div class="col-6 col-sm-4 col-md-3 col-lg-2">
+                            <div class="card mb-3">
+                                <div class="position-relative">
+                                    <img src="@item.ImageUrl" class="card-img-top img-fluid" alt="@item.Name">
+                                    @if (item.Count != null)
+                                    {
+                                        <div class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                            @item.Count
+                                            <span class="visually-hidden">quantity</span>
+                                        </div>
+                                    }
+                                </div>
+                                <div class="card-body p-2">
+                                    <p class="card-text">@item.Name</p>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="container-fluid">
+                    <div class="row mb-2">
+                        <div class="col">
+                            <div class="input-group">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text bg-dark text-white">RUB</span>
+                                </div>
+                                <input type="text" class="form-control" value="@(Product.Price * _quantity)" readonly>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="input-group">
+                                <div class="input-group-prepend">
+                                    <button class="btn btn-decrement btn-outline-secondary" type="button" @onclick="DecrementQuantity">-</button>
+                                </div>
+                                <input type="text" class="form-control text-center" @bind="_quantity">
+                                <div class="input-group-append">
+                                    <button class="btn btn-increment btn-outline-secondary" type="button" @onclick="IncrementQuantity">+</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mb-2">
+                        <div class="col">
+                            <!-- <p class="text-secondary">Товар доступен на сервере mcs rust</p> -->
+                            <p class="text-secondary">Чтобы забрать товар, введите команду <code>/store</code> в чат</p>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col">
+                            <button type="button" class="btn btn-secondary" @onclick="Close">ЗАКРЫТЬ</button>
+                        </div>
+
+                        <AuthorizeView>
+                            <Authorized>
+                                @if (Product.Price > 0)
+                                {
+                                    <div class="col text-right">
+                                        <button type="button" class="btn btn-primary" @onclick="@HandleAction">КУПИТЬ</button>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="col text-right">
+                                        <button type="button" class="btn btn-success" @onclick="@HandleAction">ПОЛУЧИТЬ</button>
+                                    </div>
+                                }
+                            </Authorized>
+                            <NotAuthorized>
+
+                            </NotAuthorized>
+                        </AuthorizeView>
+
+                        <AlertModal @ref="_alertModalComponent" />
+                      
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (ShowBackdrop)
+{
+    <div class="modal-backdrop fade show"></div>
+}
+
+@code {
+    [Parameter]
+    public ProductModel Product { get; set; }
+
+    private AlertModal _alertModalComponent;
+
+    private uint _quantity = 1;
+
+    public string ModalDisplay { get; set; } = "none;";
+    public string ModalClass { get; set; } = "";
+    public bool ShowBackdrop { get; set; } = false;
+
+
+    private void IncrementQuantity()
+    {
+        _quantity++;
+    }
+
+    private void DecrementQuantity()
+    {
+        if (_quantity > 1)
+        {
+            _quantity--;
+        }
+    }
+
+    private async Task HandleAction()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var steamUser = await UserManager.FindByLoginAsync("Steam", user.Identity.Name);
+
+        if (steamUser != null)
+        {
+            // Проверка цены товара
+            if (Product.Price > 0)
+            {
+                var balance = await TransactionService.GetBalance(steamUser); // Убедитесь, что метод GetBalance корректно реализован
+
+                if (balance >= Product.Price * _quantity)
+                {
+                    // Логика покупки товара
+                    await AddProductToUserInventory(steamUser, Product.Price);
+
+                    // Сообщение о успешной покупке
+                    _alertModalComponent.ShowSuccess("Вы успешно купили товар!");
+                }
+                else
+                {
+                    // Сообщение о недостатке средств
+                    _alertModalComponent.ShowError("У вас недостаточно средств для покупки этого товара.");
+                }
+            }
+            else
+            {
+                // Логика получения бесплатного товара
+                await AddProductToUserInventory(steamUser, 0);
+
+                // Сообщение о успешном получении товара
+                _alertModalComponent.ShowSuccess("Вы успешно получили товар!");
+            }
+
+            await DataBaseContext.SaveChangesAsync();
+            //Close(); // Закрыть модальное окно или совершить другое действие
+        }
+    }
+
+    private async Task AddProductToUserInventory(SteamIdentityUserModel steamUser, decimal productPrice)
+    {
+        var userInventoryProduct = new UserInventoryProductModel()
+            {
+                ProductId = Product.Id,
+                UserId = steamUser.Id,
+                Quantity = _quantity,
+            };
+
+        await DataBaseContext.Inventories.AddAsync(userInventoryProduct);
+
+        if (productPrice > 0)
+        {
+            await DataBaseContext.Transactions.AddAsync(new TransactionModel()
+                {
+                    Payment = productPrice * _quantity * -1,
+                    UserId = steamUser.Id,
+                    UserInventoryProductId = userInventoryProduct.Id,
+                });
+        }
+    }
+
+    public void Open()
+    {
+        ModalDisplay = "block;";
+        ModalClass = "show";
+        ShowBackdrop = true;
+        StateHasChanged();
+    }
+
+    public void Close()
+    {
+        ModalDisplay = "none";
+        ModalClass = "";
+        ShowBackdrop = false;
+        StateHasChanged();
+    }
+}

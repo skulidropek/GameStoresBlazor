@@ -1,0 +1,28 @@
+@* Указание полного имени вашего компонента Modal для избежания конфликтов *@
+<ProductModal @ref="ModalInstance" Product="@Product"></ProductModal>
+
+<div class="card h-100">
+    <a class="card-link" @onclick="() => ModalInstance.Open()">
+        <img src="@Product.ImageUrl" class="card-img-top" alt="@Product.Name">
+        <div class="card-body">
+            <h5 class="card-title">@Product.Name</h5>
+            <p class="card-text">@Product.Price RUB.</p>
+            @if (Product.Quantity > 1)
+            {
+                <span class="badge bg-secondary">x@Product.Quantity</span>
+            }
+            @if (Product.Discount > 0)
+            {
+                <span class="badge bg-danger">-@Product.Discount%</span>
+            }
+        </div>
+    </a>
+</div>
+
+
+@code {
+    [Parameter]
+    public ProductModel Product { get; set; }
+
+    private ProductModal ModalInstance { get; set; }
+}

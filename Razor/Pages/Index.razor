@@ -1,0 +1,121 @@
+﻿@page "/{categoryFilter?}"
+@inject DataBaseContext DataBaseContext;
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.EntityFrameworkCore
+<div class="container py-3">
+
+    <Navbar Categories="@_categories" />
+
+    <div class="row no-gutters mt-3">
+        @if(_products != null)
+            @foreach (var product in _products)
+            {
+                <div class="col-md-3 col-sm-6 col-xs-12 mb-3">
+                    <ProductCard Product="product" />
+                </div>
+            }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string? CategoryFilter { get; set; }
+
+    private IEnumerable<ProductModel> _products;
+    private IEnumerable<CategoryModel> _categories;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await ProductCalculate();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        _categories = await DataBaseContext.Categories
+            .AsNoTracking()
+            .ToListAsync();
+
+        //await ProductCalculate();
+
+        // if(!_products.Any())
+        // {
+        //     var category = new CategoryModel()
+        //     {
+        //         Name = "Vip"
+        //     };
+
+        //     await DataBaseContext.AddAsync(category);
+
+        //     var category1 = new CategoryModel()
+        //     {
+        //         Name = "Vip1"
+        //     };
+
+        //     await DataBaseContext.AddAsync(category1);
+        //     await DataBaseContext.SaveChangesAsync();
+
+        //     List<ProductModel> products = new List<ProductModel>();
+
+        //     for (int i = 0; i < 10; i++)
+        //     {
+
+        //         products.Add(new ProductModel()
+        //         {
+        //             Discount = 10,
+        //             ImageUrl = "https:gamestores.app/img/games/rust/818877484.png",
+        //             Name = "VIP",
+        //             Price = 250,
+        //             Quantity = 1,
+        //             Items = new List<ItemModel>()
+        //             {
+        //                 new ItemModel { Name = "Custom SMG", ImageUrl = "https:gamestores.app/img/games/rust/884424049.png", Count = 130 },
+        //                 new ItemModel { Name = "Pistol Bullet", ImageUrl = "https:gamestores.app/img/games/rust/935692442.png", Count = 200 },
+        //             },
+        //             CategoryId = category.Id,
+        //         });
+        //     } 
+            
+        //     for (int i = 0; i < 10; i++)
+        //     {
+
+        //         products.Add(new ProductModel()
+        //         {
+        //             Discount = 20,
+        //             ImageUrl = "https:gamestores.app/img/games/rust/818877484.png",
+        //             Name = "VIP1",
+        //             Price = 111,
+        //             Quantity = 1,
+        //             Items = new List<ItemModel>()
+        //             {
+        //                 new ItemModel { Name = "Custom SMG", ImageUrl = "https:gamestores.app/img/games/rust/884424049.png", Count = 130 },
+        //                 new ItemModel { Name = "Pistol Bullet", ImageUrl = "https:gamestores.app/img/games/rust/935692442.png", Count = 200 },
+        //             },
+        //                 CategoryId = category1.Id,
+        //         });
+        //     }
+
+        //     await DataBaseContext.Products.AddRangeAsync(products);
+        //     this._products = products.ToArray();
+        //     await DataBaseContext.SaveChangesAsync();
+        // }
+    }
+
+    private async Task ProductCalculate()
+    {
+        if (!string.IsNullOrEmpty(CategoryFilter))
+        {
+            _products = await DataBaseContext.Products
+                .AsNoTracking()
+                .Where(p => p.Category.Name == CategoryFilter)
+                .Include(s => s.Items)
+                .ToListAsync();
+        }
+        else
+        {
+            _products = await DataBaseContext.Products
+               .AsNoTracking()
+                .Include(s => s.Items)
+                .ToListAsync();
+        }
+    }
+}

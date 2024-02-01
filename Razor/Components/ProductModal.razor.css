@@ -1,0 +1,33 @@
+﻿/*.package {
+    position: relative;
+    text-align: center;
+}
+
+.package-cover {
+    position: relative;
+    display: inline-block;*/ /* Or flex, if you need to center align vertically */
+/*}
+
+.package-img {
+    width: 100%;*/ /* Adjust as necessary */
+/*}
+
+.package-quantity-overlay {
+    position: absolute;
+    top: 10px;*/ /* Adjust as necessary */
+    /*right: 10px;*/ /* Adjust as necessary */
+    /*background-color: rgba(0, 0, 0, 0.5);*/ /* Semi-transparent overlay */
+    /*color: white;
+    padding: 5px;
+    border-radius: 50%;
+    font-weight: bold;
+}
+
+.package-info {
+    margin-top: 10px;*/ /* Space between image and text */
+/*}*/
+
+/* Ensure text is centered below the image */
+/*.name {
+    display: block;
+}*/

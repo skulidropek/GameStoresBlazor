@@ -1,0 +1,104 @@
+﻿@using GameStoresBlazor.Services.Transactions
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Identity
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject SignInManager<SteamIdentityUserModel> SignInManager
+@inject NavigationManager NavigationManager
+@inject UserManager<SteamIdentityUserModel> UserManager
+@inject TransactionService TransactionService
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container">
+        <a class="navbar-brand" href="/">
+            <img src="/files/stores/frontend/template_4/images/rust_logo.png" alt="Rust Logo" />
+        </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="@(!collapseNavMenu)" aria-label="Toggle navigation" @onclick="ToggleNavMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="@(collapseNavMenu ? "collapse" : "collapse show") navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav mr-auto">
+                <li class="nav-item active">
+                    <NavLink class="nav-link" href="#/store">Магазин <span class="sr-only">(current)</span></NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="#/support">Техподдержка</NavLink>
+                </li>
+                <!-- Добавьте дополнительные элементы навигации здесь -->
+            </ul>
+            <ul class="navbar-nav">
+                <!-- Элементы справа (например, ссылки на социальные сети) -->
+                <li class="nav-item">
+                    <a class="nav-link" href="" target="_blank">DISCORD</a>
+                </li>
+                <!-- Добавьте другие внешние ссылки аналогичным образом -->
+                <!-- Пример выпадающего меню для выбора языка -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        RU
+                    </a>
+                    <div class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                        <a class="dropdown-item" href="#">EN</a>
+                        <a class="dropdown-item" href="#">RU</a>
+                    </div>
+                </li>
+
+                <AuthorizeView>
+                    <Authorized>
+                        <li class="nav-item">
+                            <a class="nav-link" href="" target="_blank">Баланс @_balance</a>
+                        </li>
+
+                        <li class="nav-item">
+                            <a class="nav-link">Hello @userName!</a>
+                        </li>
+                        <!-- Ссылка на профиль пользователя -->
+                        <li class="nav-item">
+                            <NavLink class="nav-link" href="profile">Профиль</NavLink>
+                        </li>
+                        <li class="nav-item">
+                            <button class="nav-link btn btn-link border-0" @onclick="Logout">Logout</button>
+                        </li>
+                    </Authorized>
+                    <NotAuthorized>
+                        <!-- Контент только для неавторизованных пользователей -->
+                        <li class="nav-item">
+                            <a href="/auth/steam" class="btn btn-primary">Войти через Steam</a>
+                        </li>
+                    </NotAuthorized>
+                </AuthorizeView>
+
+            </ul>
+        </div>
+    </div>
+</nav>
+
+@code {
+    private bool collapseNavMenu = true;
+    private string userName = "";
+    private decimal _balance;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity.IsAuthenticated)
+        {
+            var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var steamUser = await UserManager.FindByLoginAsync("Steam", user.Identity.Name);
+            _balance = await TransactionService.GetBalance(steamUser);
+            userName = user.Identity.Name;
+        }
+    }
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+
+    private async Task Logout()
+    {
+        NavigationManager.NavigateTo("/Logout", forceLoad: true);
+    }
+}
