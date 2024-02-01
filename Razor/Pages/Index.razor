@@ -1,10 +1,10 @@
-﻿@page "/{categoryFilter?}"
+﻿@page "/{categoryFilter?}/"
 @inject DataBaseContext DataBaseContext;
 @using Microsoft.AspNetCore.Components.Web
 @using Microsoft.EntityFrameworkCore
 <div class="container py-3">
 
-    <Navbar Categories="@_categories" />
+    <Navbar Categories="@_categories" OnSearch="Search" />
 
     <div class="row no-gutters mt-3">
         @if(_products != null)
@@ -23,11 +23,9 @@
 
     private IEnumerable<ProductModel> _products;
     private IEnumerable<CategoryModel> _categories;
+    private string? _searchFilter { get; set; }
 
-    protected override async Task OnParametersSetAsync()
-    {
-        await ProductCalculate();
-    }
+    protected override Task OnParametersSetAsync() => LoadProducts(_searchFilter);
 
     protected override async Task OnInitializedAsync()
     {
@@ -74,7 +72,7 @@
         //             CategoryId = category.Id,
         //         });
         //     } 
-            
+
         //     for (int i = 0; i < 10; i++)
         //     {
 
@@ -100,22 +98,28 @@
         // }
     }
 
-    private async Task ProductCalculate()
+    private Task Search(string searchTerm) 
     {
+        _searchFilter = searchTerm;
+        return LoadProducts(searchTerm); 
+    }
+
+    private async Task LoadProducts(string? searchTerm = null)
+    {
+        var query = DataBaseContext.Products.AsNoTracking();
+
         if (!string.IsNullOrEmpty(CategoryFilter))
         {
-            _products = await DataBaseContext.Products
-                .AsNoTracking()
-                .Where(p => p.Category.Name == CategoryFilter)
-                .Include(s => s.Items)
-                .ToListAsync();
+            query = query.Where(p => p.Category.Name == CategoryFilter);
         }
-        else
+
+        if (!string.IsNullOrEmpty(searchTerm))
         {
-            _products = await DataBaseContext.Products
-               .AsNoTracking()
-                .Include(s => s.Items)
-                .ToListAsync();
+            query = query.Where(p => p.Name.Contains(searchTerm));
         }
+
+        query = query.Include(s => s.Items);
+
+        _products = await query.ToListAsync();
     }
 }
