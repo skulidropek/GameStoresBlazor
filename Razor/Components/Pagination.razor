@@ -1,0 +1,27 @@
+﻿@typeparam T
+@using GameStoresBlazor.Models.Pagination
+<nav aria-label="Page navigation example">
+    <ul class="pagination">
+        <li class="page-item @(PaginationModel.HasPreviousPage ? "" : "disabled")">
+            <a class="page-link" href="javascript:void(0)" @onclick="() => OnPagination.InvokeAsync(PaginationModel.PageNumber - 1)">&laquo;</a>
+        </li>
+
+        @for (int i = 1; i <= PaginationModel.TotalPages; i++)
+        {
+            var index = i;
+            <li class="page-item @(i == PaginationModel.PageNumber ? "active" : "")">
+                <a class="page-link" href="javascript:void(0)" @onclick="() => OnPagination.InvokeAsync(index)">@index</a>
+            </li>
+        }
+
+        <li class="page-item @(PaginationModel.HasNextPage ? "" : "disabled")">
+            <a class="page-link" href="javascript:void(0)" @onclick="() => OnPagination.InvokeAsync(PaginationModel.PageNumber + 1)">&raquo;</a>
+        </li>
+    </ul>
+</nav>
+
+@code {
+    [Parameter] public PaginationModel<T> PaginationModel { get; set; }
+
+    [Parameter] public EventCallback<int> OnPagination { get; set; }
+}
