@@ -15,8 +15,8 @@
         </div>
     </div>
 
-    <form class="form-inline my-2 my-lg-0 d-flex w-100 px-2" @onsubmit="() => OnSearch.InvokeAsync(searchTerm)">
-        <input class="form-control me-2 w-85" type="search" placeholder="Поиск" aria-label="Search" @bind="searchTerm">
+    <form class="form-inline my-2 my-lg-0 d-flex w-100 px-2" @onsubmit="() => OnSearch.InvokeAsync(_searchTerm)">
+        <input class="form-control me-2 w-85" type="search" placeholder="Поиск" aria-label="Search" @bind="_searchTerm">
         <button class="btn my-2 my-sm-0 bg-secondary text-white" type="submit">Поиск</button>
     </form>
 </nav>
@@ -29,4 +29,6 @@
 
     [Parameter]
     public EventCallback<string> OnCategory { get; set; }
+
+    private string _searchTerm;
 }
