@@ -189,6 +189,7 @@
             await DataBaseContext.Transactions.AddAsync(new TransactionModel()
                 {
                     Payment = productPrice * _quantity * -1,
+                    DateTime = DateTime.UtcNow,
                     UserId = steamUser.Id,
                     UserInventoryProductId = userInventoryProduct.Id,
                 });
