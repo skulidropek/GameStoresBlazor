@@ -1,0 +1,82 @@
+﻿@page "/history"
+@using GameStoresBlazor.Models.Transactions
+@using GameStoresBlazor.Models.Pagination
+@inject DataBaseContext DataBaseContext
+
+<section class="history-content">
+    <h2 class="history-header">История</h2>
+    <div class="history-search">
+        <input type="search" class="form-control" placeholder="Детали истории...">
+    </div>
+
+    <div class="history-table">
+        <div class="table-responsive">
+
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Детали</th>
+                        <th>Дата</th>
+                        <th>Сумма</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (PaginationModel != null && PaginationModel.Items.Any())
+                    {
+                        @foreach (var transaction in PaginationModel.Items)
+                        {
+                            <tr>
+                                <td>@transaction.Description</td>
+                                <td>@transaction.DateTime.ToShortDateString()</td>
+                                <td>@transaction.Payment.ToString("C")</td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>Ваша история пуста.</tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+    @if (PaginationModel != null && PaginationModel.Items.Any())
+    {
+        <Pagination PaginationModel="PaginationModel" OnPagination="HandlePagination" />
+    }
+</section>
+
+@code {
+    [Parameter]
+    public string UserId { get; set; }
+
+    private PaginationModel<TransactionModel> PaginationModel { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTransactions(1); // Load the first page on initialization
+    }
+
+    private async Task LoadTransactions(int pageNumber)
+    {
+        var transactionsQuery = DataBaseContext.Transactions
+                                                .Where(t => t.UserId == UserId);
+
+        int totalTransactions = await transactionsQuery.CountAsync();
+
+        var pagedTransactions = await transactionsQuery
+                                    .Skip((pageNumber - 1) * PageSize)
+                                    .Take(PageSize)
+                                    .Include(t => t.UserInventoryProduct) // If you need details from related entities
+                                    .ToListAsync();
+
+        PaginationModel = new PaginationModel<TransactionModel>(pagedTransactions, totalTransactions, pageNumber, PageSize);
+    }
+
+    private const int PageSize = 10; // Set your page size
+
+    private async Task HandlePagination(int pageNumber)
+    {
+        await LoadTransactions(pageNumber);
+    }
+}
