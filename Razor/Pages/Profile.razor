@@ -5,6 +5,7 @@
 @inject UserManager<SteamIdentityUserModel> UserManager
 @inject IHttpContextAccessor httpContextAccessor
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@using System.Threading
 
 @if (currentUser == null)
 {
@@ -34,7 +35,7 @@ else
                 <div class="mb-3">
                     <div class="input-group">
                         <span class="input-group-text"><i class="bi bi-search"></i></span>
-                        <input type="text" class="form-control" placeholder="Название товара...">
+                        <input @bind="searchQuery" @bind:event="oninput" type="text" class="form-control" placeholder="Название товара...">
                     </div>
                     <div class="dropdown mt-3">
                         <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
@@ -84,6 +85,41 @@ else
     private SteamIdentityUserModel currentUser;
     private PaginationModel<UserInventoryProductModel> _pagedInventory;
     private const int _pageSize = 5;
+    private string _searchQuery = string.Empty;
+    private Timer _searchDebounceTimer; // Timer for debouncing search input
+    private bool _isComponentDisposed = false; // Flag to check component state
+
+    private string searchQuery
+    {
+        get => _searchQuery;
+        set
+        {
+            if (_searchQuery != value)
+            {
+                _searchQuery = value;
+                _searchDebounceTimer?.Change(Timeout.Infinite, Timeout.Infinite); // Cancel any pending execution
+                _searchDebounceTimer = new Timer(DebounceSearch, null, 500, Timeout.Infinite); // 500 ms delay
+            }
+        }
+    }
+
+    private async void DebounceSearch(object state)
+    {
+        if (_isComponentDisposed) return; // Do not proceed if the component has been disposed
+
+        await InvokeAsync(async () =>
+        {
+            await LoadPage(1);
+            StateHasChanged(); // Request UI update
+        });
+    }
+
+    // Make sure to dispose of the timer to avoid memory leaks
+    public void Dispose()
+    {
+        _isComponentDisposed = true; // Mark component as disposed
+        _searchDebounceTimer?.Dispose();
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -116,7 +152,7 @@ else
     public async Task<PaginationModel<UserInventoryProductModel>> GetUserInventoryAsync(string id, int pageNumber, int pageSize)
     {
         var query = DataBaseContext.Inventories
-                        .Where(s => s.UserId == id)
+                        .Where(s => s.UserId == id && (string.IsNullOrEmpty(searchQuery) || s.Product.Name.Contains(searchQuery)))
                         .Include(s => s.Product)
                         .OrderBy(s => s.Product.Name);
 
