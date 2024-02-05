@@ -1,0 +1,45 @@
+﻿@page "/history"
+
+<section class="history-content">
+    <h2 class="history-header">История</h2>
+    <div class="history-search">
+        <input type="search" class="form-control" placeholder="Детали истории...">
+    </div>
+    <div class="history-table">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Детали</th>
+                        <th>Дата</th>
+                        <th>Сумма</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Покупка Скины x1</td>
+                        <td>вт, 30 янв. 2024 г., 11:57</td>
+                        <td>-0.00 RUB</td>
+                    </tr>
+                    <tr>
+                        <td>Зачисление стартового баланса</td>
+                        <td>вт, 30 янв. 2024 г., 11:56</td>
+                        <td>+10 RUB</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <nav aria-label="Page navigation">
+        <ul class="pagination">
+            <li class="page-item"><a class="page-link" href="#">Previous</a></li>
+            <li class="page-item active"><a class="page-link" href="#">1</a></li>
+            <li class="page-item"><a class="page-link" href="#">Next</a></li>
+        </ul>
+    </nav>
+</section>
+
+@code {
+    [Parameter]
+    public string UserId { get; set; }
+}

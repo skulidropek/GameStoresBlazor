@@ -1,0 +1,119 @@
+﻿@using GameStoresBlazor.Models.Pagination
+@inject DataBaseContext DataBaseContext
+@using System.Threading
+
+    <h2 class="mb-3">Корзина</h2>
+    <div class="mb-3">
+        <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <input @bind="searchQuery" @bind:event="oninput" type="text" class="form-control" placeholder="Название товара...">
+        </div>
+        <div class="dropdown mt-3">
+            <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                Все сервера
+            </button>
+            <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                <!-- Elements here -->
+            </ul>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-header">
+            <span>Товар</span>
+            <span class="float-end">Сервер</span>
+        </div>
+        <div class="card-body">
+            @if (_pagedInventory != null && _pagedInventory.Items.Any())
+            {
+                foreach (var inventoryItem in _pagedInventory.Items)
+                {
+                    <div class="d-flex align-items-center mb-3">
+                        <img src="@inventoryItem.Product.ImageUrl" alt="@inventoryItem.Product.Name" class="img-thumbnail me-3" style="width: 60px; height: auto;">
+                        <div class="me-auto">
+                            <span>@inventoryItem.Product.Name</span>
+                        </div>
+                        <span>Количество: @inventoryItem.Quantity</span>
+                    </div>
+                }
+            }
+            else
+            {
+                <p>У вас нет товаров в корзине.</p>
+            }
+        </div>
+    </div>
+
+    @if (_pagedInventory != null && _pagedInventory.Items.Any())
+    {
+        <Pagination PaginationModel="_pagedInventory" OnPagination="LoadPage" />
+    }
+
+@code {
+    [Parameter]
+    public string UserId { get; set; }
+
+    private PaginationModel<UserInventoryProductModel> _pagedInventory;
+    private const int _pageSize = 5;
+    private string _searchQuery = string.Empty;
+    private Timer _searchDebounceTimer;
+    private bool _isComponentDisposed = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Initialize the debounce timer
+        _searchDebounceTimer = new Timer(DebounceSearch, null, Timeout.Infinite, Timeout.Infinite);
+        await LoadPage(1);
+    }
+
+    private async void DebounceSearch(object state)
+    {
+        if (_isComponentDisposed) return;
+
+        await InvokeAsync(async () =>
+        {
+            await LoadPage(1);
+            StateHasChanged();
+        });
+    }
+
+    private async Task LoadPage(int pageNumber)
+    {
+        if (string.IsNullOrEmpty(UserId)) return;
+
+        _pagedInventory = await GetUserInventoryAsync(UserId, pageNumber, _pageSize);
+        StateHasChanged(); // Ensure the UI is refreshed with the new data
+    }
+
+    public async Task<PaginationModel<UserInventoryProductModel>> GetUserInventoryAsync(string userId, int pageNumber, int pageSize)
+    {
+        var query = DataBaseContext.Inventories
+                        .Where(s => s.UserId == userId && (string.IsNullOrEmpty(_searchQuery) || s.Product.Name.Contains(_searchQuery)))
+                        .Include(s => s.Product)
+                        .OrderBy(s => s.Product.Name);
+
+        var count = await query.CountAsync();
+        var items = await query.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToListAsync();
+
+        return new PaginationModel<UserInventoryProductModel>(items, count, pageNumber, pageSize);
+    }
+
+    private string searchQuery
+    {
+        get => _searchQuery;
+        set
+        {
+            if (_searchQuery != value)
+            {
+                _searchQuery = value;
+                _searchDebounceTimer?.Change(500, Timeout.Infinite); // Delay search operation by 500 ms
+            }
+        }
+    }
+
+    // Implement IDisposable to clean up the timer
+    public void Dispose()
+    {
+        _isComponentDisposed = true;
+        _searchDebounceTimer?.Dispose();
+    }
+}
