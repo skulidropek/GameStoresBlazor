@@ -1,10 +1,13 @@
 ﻿@page "/profile"
+@page "/profile/{PageName}"
 @using GameStoresBlazor.Models.Pagination
 @attribute [Authorize(Roles = "user")]
 @inject DataBaseContext DataBaseContext
 @inject UserManager<SteamIdentityUserModel> UserManager
 @inject IHttpContextAccessor httpContextAccessor
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+@inject IServiceProvider ServiceProvider
 @using System.Threading
 
 @if (currentUser == null)
@@ -23,58 +26,24 @@ else
                     <button class="btn btn-primary btn-block">Выход</button>
                 </div>
                 <div class="list-group mt-3">
-                    <a href="#" class="list-group-item list-group-item-action">Профиль</a>
-                    <a href="#" class="list-group-item list-group-item-action">Корзина</a>
-                    <a href="#" class="list-group-item list-group-item-action">История</a>
+                    <a href="/profile" class="list-group-item list-group-item-action">Профиль</a>
+                    <a href="/profile/Basket" class="list-group-item list-group-item-action">Корзина</a>
+                    <a href="/profile/History" class="list-group-item list-group-item-action">История</a>
                 </div>
             </div>
 
-            <!-- Блок корзины -->
             <div class="col-md-9">
-                <h2 class="mb-3">Корзина</h2>
-                <div class="mb-3">
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="bi bi-search"></i></span>
-                        <input @bind="searchQuery" @bind:event="oninput" type="text" class="form-control" placeholder="Название товара...">
-                    </div>
-                    <div class="dropdown mt-3">
-                        <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
-                            Все сервера
-                        </button>
-                        <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                            <!-- Добавьте элементы выпадающего списка здесь -->
-                        </ul>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="card-header">
-                        <span>Товар</span>
-                        <span class="float-end">Сервер</span>
-                    </div>
-                    <div class="card-body">
-                        @if (_pagedInventory != null && _pagedInventory.Items.Any())
-                        {
-                            foreach (var inventoryItem in _pagedInventory.Items)
-                            {
-                                <div class="d-flex align-items-center mb-3">
-                                    <img src="@inventoryItem.Product.ImageUrl" alt="@inventoryItem.Product.Name" class="img-thumbnail me-3" style="width: 60px; height: auto;">
-                                    <div class="me-auto">
-                                        <span>@inventoryItem.Product.Name</span>
-                                    </div>
-                                    <span>Количество: @inventoryItem.Quantity</span>
-                                </div>
-                            }
-                        }
-                        else
-                        {
-                            <p>У вас нет товаров в корзине.</p>
-                        }
-                    </div>
-                </div>
-
-                @if (_pagedInventory != null && _pagedInventory.Items.Any())
+                @switch (PageName)
                 {
-                    <Pagination PaginationModel="_pagedInventory" OnPagination="LoadPage" />
+                    case "Basket":
+                        <Basket UserId="@currentUser.Id" />
+                        break;
+                    case "History":
+                        <History UserId="@currentUser.Id" />
+                        break;
+                    default:
+                        <ProfileDetailsComponent UserId="@currentUser.Id" />
+                        break;
                 }
             </div>
         </div>
@@ -83,82 +52,30 @@ else
 
 @code {
     private SteamIdentityUserModel currentUser;
-    private PaginationModel<UserInventoryProductModel> _pagedInventory;
-    private const int _pageSize = 5;
-    private string _searchQuery = string.Empty;
-    private Timer _searchDebounceTimer; // Timer for debouncing search input
-    private bool _isComponentDisposed = false; // Flag to check component state
-
-    private string searchQuery
-    {
-        get => _searchQuery;
-        set
-        {
-            if (_searchQuery != value)
-            {
-                _searchQuery = value;
-                _searchDebounceTimer?.Change(Timeout.Infinite, Timeout.Infinite); // Cancel any pending execution
-                _searchDebounceTimer = new Timer(DebounceSearch, null, 500, Timeout.Infinite); // 500 ms delay
-            }
-        }
-    }
-
-    private async void DebounceSearch(object state)
-    {
-        if (_isComponentDisposed) return; // Do not proceed if the component has been disposed
-
-        await InvokeAsync(async () =>
-        {
-            await LoadPage(1);
-            StateHasChanged(); // Request UI update
-        });
-    }
-
-    // Make sure to dispose of the timer to avoid memory leaks
-    public void Dispose()
-    {
-        _isComponentDisposed = true; // Mark component as disposed
-        _searchDebounceTimer?.Dispose();
-    }
+    [Parameter]
+    public string PageName { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
         await InitializeCurrentUser();
-        await LoadPage(1);
     }
 
     private async Task InitializeCurrentUser()
     {
-        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        var user = authState.User;
-
-        if (user.Identity.IsAuthenticated)
+        using (var scope = ServiceProvider.CreateScope())
         {
-            var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!string.IsNullOrEmpty(userId))
+            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<SteamIdentityUserModel>>();
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            if (user.Identity.IsAuthenticated)
             {
-                currentUser = await UserManager.FindByLoginAsync("Steam", user.Identity.Name);
+                var userId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (!string.IsNullOrEmpty(userId))
+                {
+                    currentUser = await userManager.FindByLoginAsync("Steam", user.Identity.Name);
+                }
             }
         }
-    }
-
-    private async Task LoadPage(int pageNumber)
-    {
-        if (currentUser == null) return;
-
-        _pagedInventory = await GetUserInventoryAsync(currentUser.Id, pageNumber, _pageSize);
-    }
-
-    public async Task<PaginationModel<UserInventoryProductModel>> GetUserInventoryAsync(string id, int pageNumber, int pageSize)
-    {
-        var query = DataBaseContext.Inventories
-                        .Where(s => s.UserId == id && (string.IsNullOrEmpty(searchQuery) || s.Product.Name.Contains(searchQuery)))
-                        .Include(s => s.Product)
-                        .OrderBy(s => s.Product.Name);
-
-        var count = await query.CountAsync();
-        var items = await query.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToListAsync();
-
-        return new PaginationModel<UserInventoryProductModel>(items, count, pageNumber, pageSize);
     }
 }
