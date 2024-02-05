@@ -1,12 +1,17 @@
 ﻿@page "/history"
+@using GameStoresBlazor.Models.Transactions
+@using GameStoresBlazor.Models.Pagination
+@inject DataBaseContext DataBaseContext
 
 <section class="history-content">
     <h2 class="history-header">История</h2>
     <div class="history-search">
         <input type="search" class="form-control" placeholder="Детали истории...">
     </div>
+
     <div class="history-table">
         <div class="table-responsive">
+
             <table class="table">
                 <thead>
                     <tr>
@@ -16,30 +21,62 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr>
-                        <td>Покупка Скины x1</td>
-                        <td>вт, 30 янв. 2024 г., 11:57</td>
-                        <td>-0.00 RUB</td>
-                    </tr>
-                    <tr>
-                        <td>Зачисление стартового баланса</td>
-                        <td>вт, 30 янв. 2024 г., 11:56</td>
-                        <td>+10 RUB</td>
-                    </tr>
+                    @if (PaginationModel != null && PaginationModel.Items.Any())
+                    {
+                        @foreach (var transaction in PaginationModel.Items)
+                        {
+                            <tr>
+                                <td>@transaction.Description</td>
+                                <td>@transaction.DateTime.ToShortDateString()</td>
+                                <td>@transaction.Payment.ToString("C")</td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>Ваша история пуста.</tr>
+                    }
                 </tbody>
             </table>
         </div>
     </div>
-    <nav aria-label="Page navigation">
-        <ul class="pagination">
-            <li class="page-item"><a class="page-link" href="#">Previous</a></li>
-            <li class="page-item active"><a class="page-link" href="#">1</a></li>
-            <li class="page-item"><a class="page-link" href="#">Next</a></li>
-        </ul>
-    </nav>
+    @if (PaginationModel != null && PaginationModel.Items.Any())
+    {
+        <Pagination PaginationModel="PaginationModel" OnPagination="HandlePagination" />
+    }
 </section>
 
 @code {
     [Parameter]
     public string UserId { get; set; }
+
+    private PaginationModel<TransactionModel> PaginationModel { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTransactions(1); // Load the first page on initialization
+    }
+
+    private async Task LoadTransactions(int pageNumber)
+    {
+        var transactionsQuery = DataBaseContext.Transactions
+                                                .Where(t => t.UserId == UserId);
+
+        int totalTransactions = await transactionsQuery.CountAsync();
+
+        var pagedTransactions = await transactionsQuery
+                                    .Skip((pageNumber - 1) * PageSize)
+                                    .Take(PageSize)
+                                    .Include(t => t.UserInventoryProduct) // If you need details from related entities
+                                    .ToListAsync();
+
+        PaginationModel = new PaginationModel<TransactionModel>(pagedTransactions, totalTransactions, pageNumber, PageSize);
+    }
+
+    private const int PageSize = 10; // Set your page size
+
+    private async Task HandlePagination(int pageNumber)
+    {
+        await LoadTransactions(pageNumber);
+    }
 }

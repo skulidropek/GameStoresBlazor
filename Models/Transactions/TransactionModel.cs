@@ -12,6 +12,7 @@ namespace GameStoresBlazor.Models.Transactions
 
         public string? Description { get; set; }
 
+        public DateTime DateTime { get; set; }
         public string UserId { get; set; }
         
         public virtual SteamIdentityUserModel User { get; set; }
