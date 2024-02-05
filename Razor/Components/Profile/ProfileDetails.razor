@@ -1,0 +1,50 @@
+﻿@using GameStoresBlazor.Models.User
+@using GameStoresBlazor.Services.Transactions
+@using Microsoft.AspNetCore.Components.Web
+@inject TransactionService TransactionService;
+
+<section class="container mt-4">
+    <div class="card">
+        <h2 class="card-header">Профиль @User.Name</h2>
+        <div class="card-body">
+            <h5 class="card-title">Информация</h5>
+            <p class="card-text">
+                <strong>SteamID:</strong>
+                <a href="@($"https://steamcommunity.com/profiles/{User.SteamId}")" target="_blank" rel="noopener noreferrer">@User.SteamId</a>
+            </p>
+            <p class="card-text">
+                <strong>Баланс:</strong> @_balance RUB
+            </p>
+            <div class="dropdown mt-3">
+                <button class="btn btn-secondary dropdown-toggle" type="button" id="defaultServerDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    MyServer
+                </button>
+                <ul class="dropdown-menu" aria-labelledby="defaultServerDropdown">
+                    <li><a class="dropdown-item" href="#">Option 1</a></li>
+                    <li><a class="dropdown-item" href="#">Option 2</a></li>
+                    <li><a class="dropdown-item" href="#">Option 3</a></li>
+                </ul>
+            </div>
+            <div class="mt-4">
+                <h5 class="card-title">Использование промокода</h5>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" placeholder="Имя промокода" aria-label="Recipient's username" aria-describedby="button-addon2">
+                    <button class="btn btn-outline-secondary" type="button" id="button-addon2">Применить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+@code {
+    [Parameter]
+    public SteamIdentityUserModel User { get; set; }
+
+    private decimal _balance;
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        _balance = await TransactionService.GetBalance(User);
+    }
+}
